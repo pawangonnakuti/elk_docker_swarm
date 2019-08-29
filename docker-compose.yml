@@ -1,0 +1,228 @@
+version: '3.7'
+
+services:
+  es-master:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+    deploy:
+      restart_policy:
+        condition: any
+      mode: global
+    environment:
+      - node.name=es-master-{{.Node.Hostname}}
+      - node.master=true
+      - node.data=false
+      - node.ingest=false
+      - discovery.type=zen
+      - discovery.seed_hosts=es-master
+      - path.repo=/usr/share/elasticsearch/bkup
+      - cluster.initial_master_nodes=es-master-<<hostname>>
+      - cluster.name=docker-cluster
+      - network.host=0.0.0.0
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+#     - xpack.security.enabled=true
+#     - xpack.security.transport.ssl.enabled=true
+#     - xpack.security.authc.accept_default_password=true
+#     - xpack.license.self_generated.type=basic
+#     - xpack.security.transport.ssl.keystore.type=PKCS12
+#     - xpack.security.transport.ssl.verification_mode=certificate
+#     - xpack.security.transport.ssl.keystore.path=elastic-certificates.p12
+#     - xpack.security.transport.ssl.truststore.path=elastic-certificates.p12
+#     - xpack.security.transport.ssl.truststore.type=PKCS12
+#     - elastic.password=espass
+#     - ELASTIC_PASSWORD=espass
+      - xpack.monitoring.collection.enabled=true
+      - logger.transport.level=warn
+    volumes:
+      - esm-data:/usr/share/elasticsearch/data
+      - esm-bkup:/usr/share/elasticsearch/bkup
+#     - ./es-certs/elastic-certificates.p12:/usr/share/elasticsearch/config/elastic-certificates.p12
+    ports:
+      - 9200:9200
+      - 9300:9300
+    networks:
+      - elknet
+  es-ingest:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+    deploy:
+      restart_policy:
+        condition: any
+      mode: global
+    environment:
+      - node.name=es-ingest-{{.Node.Hostname}}
+      - node.master=false
+      - node.data=false
+      - node.ingest=true
+      - discovery.type=zen
+      - discovery.seed_hosts=es-master
+      - path.repo=/usr/share/elasticsearch/bkup
+      - cluster.initial_master_nodes=es-master-<<hostname>>
+      - cluster.name=docker-cluster
+      - network.host=0.0.0.0
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+#     - xpack.security.enabled=true
+#     - xpack.security.transport.ssl.enabled=true
+#     - xpack.security.authc.accept_default_password=true
+#     - xpack.license.self_generated.type=basic
+#     - xpack.security.transport.ssl.keystore.type=PKCS12
+#     - xpack.security.transport.ssl.verification_mode=certificate
+#     - xpack.security.transport.ssl.keystore.path=elastic-certificates.p12
+#     - xpack.security.transport.ssl.truststore.path=elastic-certificates.p12
+#     - xpack.security.transport.ssl.truststore.type=PKCS12
+#     - elastic.password=espass
+#     - ELASTIC_PASSWORD=espass
+      - xpack.monitoring.collection.enabled=true
+      - logger.transport.level=warn
+    volumes:
+      - esi-data:/usr/share/elasticsearch/data
+      - esi-bkup:/usr/share/elasticsearch/bkup
+#     - ./es-certs/elastic-certificates.p12:/usr/share/elasticsearch/config/elastic-certificates.p12
+    ports:
+      - 9201:9200
+      - 9301:9300
+    networks:
+      - elknet
+    depends_on:
+      - es-master
+  es-data:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+    deploy:
+      restart_policy:
+        condition: any
+      mode: global
+    environment:
+      - node.name=es-data-{{.Node.Hostname}}
+      - node.master=false
+      - node.data=true
+      - node.ingest=false
+      - node.ml=false
+      - discovery.type=zen
+      - discovery.seed_hosts=es-master
+      - path.repo=/usr/share/elasticsearch/bkup
+      - cluster.initial_master_nodes=es-master-<<hostname>>
+      - cluster.name=docker-cluster
+      - network.host=0.0.0.0
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+#     - xpack.security.enabled=true
+#     - xpack.security.transport.ssl.enabled=true
+#     - xpack.security.authc.accept_default_password=true
+#     - xpack.license.self_generated.type=basic
+#     - xpack.security.transport.ssl.keystore.type=PKCS12
+#     - xpack.security.transport.ssl.verification_mode=certificate
+#     - xpack.security.transport.ssl.keystore.path=elastic-certificates.p12
+#     - xpack.security.transport.ssl.truststore.path=elastic-certificates.p12
+#     - xpack.security.transport.ssl.truststore.type=PKCS12
+#     - elastic.password=espass
+#     - ELASTIC_PASSWORD=espass
+      - xpack.monitoring.collection.enabled=true
+      - logger.transport.level=warn
+    volumes:
+      - esd-data:/usr/share/elasticsearch/data
+      - esd-bkup:/usr/share/elasticsearch/bkup
+#     - ./es-certs/elastic-certificates.p12:/usr/share/elasticsearch/config/elastic-certificates.p12
+    ports:
+      - 9202:9200
+      - 9302:9300
+    networks:
+      - elknet
+    depends_on:
+      - es-master
+      - es-ingest
+  ki01:
+    image: docker.elastic.co/kibana/kibana:7.2.0
+    deploy:
+      restart_policy:
+        condition: any
+      mode: global
+    environment:
+#     - LOGSTASH_HOSTS=http://ls01:5044/
+      - ELASTICSEARCH_HOSTS=http://es-master:9200
+      - bootstrap.memory_lock=true
+      - cluster.name=docker-cluster
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - XPACK_SECURITY_ENABLED=true
+#     - ELASTICSEARCH_USERNAME=elastic
+#     - ELASTICSEARCH_PASSWORD=espass
+#      - xpack.security.enabled=true
+#      - xpack.security.transport.ssl.enabled=true
+#      - elasticsearch.username=elastic
+#      - elasticsearch.password=espass
+      - xpack.monitoring.enabled=true
+      - xpack.monitoring.collection.enabled=true
+#     - XPACK_MONITORING_ENABLED=true
+#     - XPACK_MONITORING_COLLECTION_ENABLED=true
+      - xpack.monitoring.collection.enabled=true
+    volumes:
+      - kidata01:/usr/share/kibana/data
+    ports:
+      - 5601:5601
+    networks:
+      - elknet
+    depends_on:
+      - es-master
+      - es-ingest
+      - es-data
+# ls01:
+#   image: docker.elastic.co/logstash/logstash:7.2.0
+#   deploy:
+#     restart_policy:
+#       condition: any
+#     mode: replicated
+#     replicas: 2
+#   environment:
+#     - XPACK_MONITORING_ELASTICSEARCH_HOSTS=http://es-master:9200
+#     - XPACK_MONITORING_ELASTICSEARCH_VERSION=7
+#     - XPACK_MONITORING_ELASTICSEARCH_DOCUMENT_TYPE=doc
+#     - XPACK_MONITORING_ELASTICSEARCH_INDEX="metricbeat"
+#     - XPACK_MONITORING_ENABLED=true
+#     - XPACK_SECURITY_ENABLED=true
+#     - cluster.name=docker-cluster
+#     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+#   command: logstash -f /config/logstash.conf
+#   volumes:
+#     - ./config:/config
+#     - lsdata01:/usr/share/logstash/data
+#   ports:
+#     - 5044:5044
+#     - 5140:5140
+#     - 8080:8080
+#   networks:
+#     - elknet
+#   depends_on:
+#     - ki01
+#     - es-data
+# fd01:
+#   image: fluent/fluentd
+#   deploy:
+#     restart_policy:
+#       condition: any
+#     mode: global
+#   volumes:
+#     - ./config/fluentd:/fluentd/etc
+#   ports:
+#     - 24224:24224
+#     - 24224:24224/udp
+#   networks:
+#     - elknet
+volumes:
+  esm-data:
+    driver: local
+  esm-bkup:
+    driver: local
+  esi-data:
+    driver: local
+  esi-bkup:
+    driver: local
+  esd-data:
+    driver: local
+  esd-bkup:
+    driver: local
+  kidata01:
+    driver: local
+  lsdata01:
+    driver: local
+networks:
+  elknet:
+    driver: overlay
