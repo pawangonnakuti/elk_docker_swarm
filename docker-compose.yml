@@ -153,7 +153,6 @@ services:
       - xpack.monitoring.collection.enabled=true
 #     - XPACK_MONITORING_ENABLED=true
 #     - XPACK_MONITORING_COLLECTION_ENABLED=true
-      - xpack.monitoring.collection.enabled=true
     volumes:
       - kidata01:/usr/share/kibana/data
     ports:
@@ -164,35 +163,35 @@ services:
       - es-master
       - es-ingest
       - es-data
-# ls01:
-#   image: docker.elastic.co/logstash/logstash:7.2.0
-#   deploy:
-#     restart_policy:
-#       condition: any
-#     mode: replicated
-#     replicas: 2
-#   environment:
-#     - XPACK_MONITORING_ELASTICSEARCH_HOSTS=http://es-master:9200
-#     - XPACK_MONITORING_ELASTICSEARCH_VERSION=7
-#     - XPACK_MONITORING_ELASTICSEARCH_DOCUMENT_TYPE=doc
-#     - XPACK_MONITORING_ELASTICSEARCH_INDEX="metricbeat"
-#     - XPACK_MONITORING_ENABLED=true
-#     - XPACK_SECURITY_ENABLED=true
-#     - cluster.name=docker-cluster
-#     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-#   command: logstash -f /config/logstash.conf
-#   volumes:
-#     - ./config:/config
-#     - lsdata01:/usr/share/logstash/data
-#   ports:
-#     - 5044:5044
-#     - 5140:5140
-#     - 8080:8080
-#   networks:
-#     - elknet
-#   depends_on:
-#     - ki01
-#     - es-data
+  ls01:
+    image: docker.elastic.co/logstash/logstash:7.2.0
+    deploy:
+      restart_policy:
+        condition: any
+      mode: global
+    environment:
+      - XPACK_MONITORING_ELASTICSEARCH_HOSTS=http://es-master:9200
+      - XPACK_MONITORING_ELASTICSEARCH_VERSION=7
+      - XPACK_MONITORING_ELASTICSEARCH_DOCUMENT_TYPE=doc
+      - XPACK_MONITORING_ELASTICSEARCH_INDEX="metricbeat"
+      - XPACK_MONITORING_ENABLED=true
+      - XPACK_SECURITY_ENABLED=true
+      - cluster.name=docker-cluster
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    command: logstash -f /config/logstash.conf
+    volumes:
+      - /etc/elkconfig/logstash:/config
+      - lsdata01:/usr/share/logstash/data
+    ports:
+      - 5044:5044
+      - 1514:1514
+      - 9600:9600
+      - 8080:8080
+    networks:
+      - elknet
+    depends_on:
+      - ki01
+      - es-data
 # fd01:
 #   image: fluent/fluentd
 #   deploy:
@@ -226,3 +225,4 @@ volumes:
 networks:
   elknet:
     driver: overlay
+
